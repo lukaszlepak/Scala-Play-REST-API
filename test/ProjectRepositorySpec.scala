@@ -28,5 +28,27 @@ class ProjectRepositorySpec extends PlaySpec with GuiceOneAppPerSuite {
       repository.selectAll.futureValue.map(_.name) should contain ("test_project007")
     }
 
+    "select project" in {
+      val selectedProject = repository.select("test_project007")
+
+      Await.result(selectedProject, 5.seconds)
+
+      selectedProject.futureValue should be ('defined)
+      selectedProject.futureValue.get.name should be ("test_project007")
+    }
+
+    "update name in project" in {
+      Await.result(repository.update("test_project007", "test_project007newName"), 5.seconds)
+
+      repository.selectAll.futureValue.map(_.name) should contain ("test_project007newName")
+    }
+
+    "softDelete project by name" in {
+      val timestamp = Timestamp.from(Instant.now().truncatedTo(ChronoUnit.SECONDS))
+
+      Await.result(repository.softDelete("test_project007newName", timestamp), 5.seconds)
+
+      repository.select("test_project007newName").futureValue.map(_.isDeleted) should not contain Timestamp.valueOf("0001-01-01 00:00:00")
+    }
   }
 }
