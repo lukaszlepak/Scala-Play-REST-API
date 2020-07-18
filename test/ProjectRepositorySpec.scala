@@ -10,6 +10,8 @@ import play.api.Application
 import org.scalatest.concurrent.ScalaFutures._
 import org.scalatest.matchers.should.Matchers._
 
+import scala.concurrent.Await
+import scala.concurrent.duration._
 
 
 class ProjectRepositorySpec extends PlaySpec with GuiceOneAppPerSuite {
@@ -21,9 +23,9 @@ class ProjectRepositorySpec extends PlaySpec with GuiceOneAppPerSuite {
     "insert and return new project" in {
       val timestamp = Timestamp.from(Instant.now().truncatedTo(ChronoUnit.SECONDS))
 
-      repository.insert("test_project007", timestamp)
+      Await.result(repository.insert("test_project007", timestamp), 5.seconds)
 
-      repository.selectAll.futureValue.map(_.name) should contain only "test_project007"
+      repository.selectAll.futureValue.map(_.name) should contain ("test_project007")
     }
 
   }
