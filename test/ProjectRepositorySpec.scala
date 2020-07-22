@@ -2,13 +2,12 @@ import java.sql.Timestamp
 import java.time.temporal.ChronoUnit
 import java.time.Instant
 
-import models.ProjectRepository
 import org.scalatestplus.play.PlaySpec
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.Application
-
 import org.scalatest.concurrent.ScalaFutures._
 import org.scalatest.matchers.should.Matchers._
+import v1.project.ProjectRepository
 
 import scala.concurrent.Await
 import scala.concurrent.duration._

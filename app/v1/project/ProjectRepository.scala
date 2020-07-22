@@ -1,12 +1,12 @@
-package models
+package v1.project
 
 import java.sql.Timestamp
 
 import javax.inject.Inject
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
+import slick.jdbc.JdbcProfile
 
 import scala.concurrent.{ExecutionContext, Future}
-import slick.jdbc.JdbcProfile
 
 class ProjectRepository @Inject() (protected val dbConfigProvider: DatabaseConfigProvider)(implicit ec: ExecutionContext) extends HasDatabaseConfigProvider[JdbcProfile] {
 
@@ -35,14 +35,14 @@ class ProjectRepository @Inject() (protected val dbConfigProvider: DatabaseConfi
 
   def insert(name: String, ts: Timestamp): Future[Int] = db.run {
     projects.filter(_.name === name).result.headOption.flatMap {
-      case Some(p) => DBIO.successful(p.id)
+      case Some(_) => DBIO.successful(-1)
       case None => (projects returning projects.map(_.id)) += Project(0, name, ts, Timestamp.valueOf("0001-01-01 00:00:00"))
     }.transactionally
   }
 
   def update(oldName: String, newName: String): Future[Int] = db.run {
     projects.filter(_.name === newName).result.headOption.flatMap {
-      case Some(p) => DBIO.successful(p.id)
+      case Some(_) => DBIO.successful(-1)
       case None => projects.filter(_.name === oldName).map(_.name).update(newName)
     }.transactionally
   }
