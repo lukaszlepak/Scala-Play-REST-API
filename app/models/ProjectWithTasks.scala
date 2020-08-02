@@ -1,12 +1,12 @@
-package v1.project
+package models
 
 import java.sql.Timestamp
 
 import play.api.libs.json._
 
-case class Project(id: Int, name: String, ts: Timestamp, isDeleted: Timestamp)
+case class ProjectWithTasks(id: Int, name: String, ts: Timestamp, isDeleted: Timestamp, tasks: Seq[Task] = Seq())
 
-object Project {
+object ProjectWithTasks {
   def timestampToString(t: Timestamp): String = t.toString
   def stringToTimestamp(dt: String): Timestamp = Timestamp.valueOf(dt)
 
@@ -14,6 +14,6 @@ object Project {
     def writes(t: Timestamp): JsValue = Json.toJson(timestampToString(t))
     def reads(json: JsValue): JsResult[Timestamp] = Json.fromJson[String](json).map(stringToTimestamp)
   }
-
-  implicit val format: Format[Project] = Json.format
+  
+  implicit val format: Format[ProjectWithTasks] = Json.format
 }
