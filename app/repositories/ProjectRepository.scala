@@ -7,6 +7,7 @@ import models._
 import play.api.db.slick._
 import slick.jdbc.JdbcProfile
 
+import scala.collection.immutable.SeqMap
 import scala.concurrent.{ExecutionContext, Future}
 
 class ProjectRepository @Inject() (protected val dbConfigProvider: DatabaseConfigProvider)(implicit ec: ExecutionContext) extends HasDatabaseConfigProvider[JdbcProfile] {
@@ -17,40 +18,65 @@ class ProjectRepository @Inject() (protected val dbConfigProvider: DatabaseConfi
 
   val tasks = TaskSchema.tasks
 
-  val leftJoinProjectsTasks = projects joinLeft tasks on ( (p: ProjectSchema.ProjectTable, t: TaskSchema.TaskTable) => p.id === t.project_id)
+  val leftJoinProjectsTasks = projects joinLeft tasks on (_.id === _.project_id)
 
-  def findProjectsWithTasks(): Future[Map[Project, Seq[Option[Task]]]] = db.run {
-    leftJoinProjectsTasks.result
-      .map { _.groupBy(_._1).map { case (k,v) => (k,v.map(_._2)) } }
+  def findProjectsWithTasks(idList: Option[Seq[Int]], beforeTS: Option[Timestamp], afterTS: Option[Timestamp], isDeleted: Option[Boolean], page:Option[Int], pageSize: Option[Int], sortBy: Option[String], order: Option[String]): Future[Map[Project, Seq[Task]]] = db.run {
+    val filteredProjects = projects
+      .filterOpt(idList)((row, idList) => row.id.inSet(idList))
+      .filterOpt(beforeTS)(_.ts < _)
+      .filterOpt(afterTS)(_.ts > _)
+      .filterOpt(isDeleted) {
+        case (row, true) => row.isDeleted.isEmpty
+        case (row, false) => row.isDeleted.isDefined
+      }
+
+    val sortedProjects = (sortBy, order) match {
+      case (Some("created_at"), Some("asc")) => filteredProjects.sortBy(_.ts.asc)
+      case (Some("last_activity"), Some("asc")) => filteredProjects.sortBy(_.lastActivity.asc)
+      case (Some("created_at"), Some("desc")) => filteredProjects.sortBy(_.ts.desc)
+      case (Some("last_activity"), Some("desc")) => filteredProjects.sortBy(_.lastActivity.desc)
+      case _ => filteredProjects
+    }
+
+    val pagedProjects = (page, pageSize) match {
+      case (Some(p: Int), Some(ps: Int)) => sortedProjects.drop(p*ps).take(ps)
+      case _ => sortedProjects
+    }
+
+    (pagedProjects joinLeft tasks on (_.id === _.project_id)).result.map {
+      _.foldLeft(SeqMap.empty[Project, Seq[Task]]) {
+        case (acc, (k, v)) => acc.updated(k, acc.getOrElse(k, Seq.empty[Task]) ++ v)
+      }
+    }
   }
 
-  def findProjectWithTasks(name: String): Future[Option[(Project, Seq[Option[Task]])]] = db.run {
-    leftJoinProjectsTasks.filter(_._1.name === name).result
+  def findProjectWithTasks(id: Int): Future[Option[(Project, Seq[Option[Task]])]] = db.run {
+    leftJoinProjectsTasks.filter(_._1.id === id).result
       .map { _.groupBy(_._1).map { case (k,v) => (k,v.map(_._2)) }.headOption }
   }
 
   def insertProject(name: String): Future[Int] = db.run {
     projects.filter(_.name === name).result.headOption.flatMap {
       case Some(_) => DBIO.successful(-1)
-      case None => projects += Project(0, name, new Timestamp(System.currentTimeMillis()), Timestamp.valueOf("0001-01-01 00:00:00"))
+      case None => projects += Project(0, name, new Timestamp(System.currentTimeMillis()),  new Timestamp(System.currentTimeMillis()), None)
     }.transactionally
   }
 
-  def updateProject(oldName: String, newName: String): Future[Int] = db.run {
-    projects.filter(_.name === newName).result.headOption.flatMap {
+  def updateProject(id: Int, name: String): Future[Int] = db.run {
+    projects.filter(_.name === name).result.headOption.flatMap {
       case Some(_) => DBIO.successful(-1)
-      case None => projects.filter(_.name === oldName).map(_.name).update(newName)
+      case None => projects.filter(_.id === id).map(_.name).update(name)
     }.transactionally
   }
 
-  def softDeleteProject(name: String): Future[Int] = db.run {
+  def softDeleteProject(id: Int): Future[Int] = db.run {
     {
       val ts = new Timestamp(System.currentTimeMillis())
-      projects.filter(_.name === name).result.headOption.flatMap {
-        case Some(p) => tasks.filter(t => t.project_id === p.id).map(_.isDeleted).update(ts)
-        case None => DBIO.successful(-1)
-      } andThen
-        projects.filter(_.name === name).map(_.isDeleted).update(ts)
+      projects.filter(_.id === id).result.headOption.flatMap {
+        case Some(p) => tasks.filter(t => t.project_id === p.id).map(_.isDeleted).update(Some(ts)) andThen
+          projects.filter(_.id === id).map(_.isDeleted).update(Some(ts))
+        case None => DBIO.successful(0)
+      }
     }.transactionally
   }
 }

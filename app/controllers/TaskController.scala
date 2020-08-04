@@ -12,7 +12,6 @@ import scala.concurrent.ExecutionContext.Implicits.global
 class TaskController @Inject()(repository: TaskRepository, cc: ControllerComponents) extends AbstractController(cc) {
 
   def insertTask(): Action[JsValue] = Action.async(parse.json) { request: Request[JsValue] =>
-
     val addedTask = repository.insertTask((request.body \ "project_id").as[Int], (request.body \ "duration").as[Long], Option((request.body \ "volume").as[Int]), Option((request.body \ "description").as[String]))
 
     addedTask.map {
@@ -22,7 +21,6 @@ class TaskController @Inject()(repository: TaskRepository, cc: ControllerCompone
   }
 
   def updateTask(id: Int): Action[JsValue] = Action.async(parse.json) { request: Request[JsValue] =>
-
     val updatedTask = repository.updateTask(id, (request.body \ "project_id").as[Int], Timestamp.valueOf((request.body \ "timestamp").as[String]), (request.body \ "duration").as[Long], Option((request.body \ "volume").as[Int]), Option((request.body \ "description").as[String]))
 
     updatedTask.map {

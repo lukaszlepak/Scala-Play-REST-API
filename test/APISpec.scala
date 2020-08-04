@@ -4,15 +4,11 @@ import org.scalatestplus.play.PlaySpec
 import play.api.libs.json.Json
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
-import play.api.db.Databases
 
 class APISpec extends PlaySpec with GuiceOneAppPerSuite {
 
-  private val database = Databases.inMemory()
-
   val projectsURL = "/v1/projects"
-  def projectURL(name: String) = s"/v1/projects/$name"
-  def updateProjectULR(oldName: String, newName: String) = s"/v1/projects/$oldName/$newName"
+  def projectURL(id: Int) = s"/v1/projects/$id"
 
   val tasksURL = "/v1/tasks"
   def taskURL(id: Int) = s"/v1/tasks/$id"
@@ -25,14 +21,12 @@ class APISpec extends PlaySpec with GuiceOneAppPerSuite {
     ////////////PROJECTS
 
     "add a project" in {
-      val response = route(app, FakeRequest(POST, projectURL(projectName))).get
-      status(response) mustBe OK
-    }
+      val fakeJSON = Json.obj(
+        "name" -> projectName
+      )
 
-    "show added project" in {
-      val response = route(app, FakeRequest(GET, projectURL(projectName))).get
+      val response = route(app, FakeRequest(POST, projectsURL).withBody(fakeJSON)).get
       status(response) mustBe OK
-      contentAsString(response) must include (projectName)
     }
 
     "show all projects" in {
@@ -41,26 +35,31 @@ class APISpec extends PlaySpec with GuiceOneAppPerSuite {
       contentAsString(response) must include (projectName)
     }
 
+    "show added project" in {
+      val response = route(app, FakeRequest(GET, projectURL(1))).get
+      status(response) mustBe OK
+      contentAsString(response) must include (projectName)
+    }
+
     "update project name" in {
-      val response = route(app, FakeRequest(PUT, updateProjectULR(projectName, projectNewName))).get
+      val fakeJSON = Json.obj(
+        "name" -> projectNewName
+      )
+
+      val response = route(app, FakeRequest(PUT, projectURL(1)).withBody(fakeJSON)).get
       status(response) mustBe OK
     }
 
     "delete project" in {
-      val response = route(app, FakeRequest(DELETE, projectURL(projectNewName))).get
+      val response = route(app, FakeRequest(DELETE, projectURL(1))).get
       status(response) mustBe OK
     }
 
     ///////////TASKS
 
     "add a task" in {
-      val responseProject = route(app, FakeRequest(GET, projectURL(projectNewName))).get
-      status(responseProject) mustBe OK
-
-      val project_id = (contentAsJson(responseProject) \ "id").as[Int]
-
       val fakeJSON = Json.obj(
-        "project_id" -> project_id,
+        "project_id" -> 1,
         "duration" -> 1,
         "volume" -> 1,
         "description" -> "test"
@@ -70,33 +69,19 @@ class APISpec extends PlaySpec with GuiceOneAppPerSuite {
     }
 
     "update task" in {
-      val responseProject = route(app, FakeRequest(GET, projectURL(projectNewName))).get
-      status(responseProject) mustBe OK
-
-      val project_id = (contentAsJson(responseProject) \ "id").as[Int]
-
-      val task_json = (contentAsJson(responseProject) \ "tasks")(0)
-      val task_id = (task_json \ "id").as[Int]
-
       val fakeJSON = Json.obj(
-        "project_id" -> project_id,
+        "project_id" -> 1,
         "timestamp" -> "2022-07-31 16:55:20.549",
         "duration" -> 2,
         "volume" -> 2,
         "description" -> "test2"
       )
-      val response = route(app, FakeRequest(PUT, taskURL(task_id)).withBody(fakeJSON)).get
+      val response = route(app, FakeRequest(PUT, taskURL(1)).withBody(fakeJSON)).get
       status(response) mustBe OK
     }
 
     "delete task" in {
-      val responseProject = route(app, FakeRequest(GET, projectURL(projectNewName))).get
-      status(responseProject) mustBe OK
-
-      val task_json = (contentAsJson(responseProject) \ "tasks")(0)
-      val task_id = (task_json \ "id").as[Int]
-
-      val response = route(app, FakeRequest(DELETE, taskURL(task_id))).get
+      val response = route(app, FakeRequest(DELETE, taskURL(1))).get
       status(response) mustBe OK
     }
 

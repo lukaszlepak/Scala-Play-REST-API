@@ -17,9 +17,11 @@ object ProjectSchema extends JdbcProfile {
 
     def ts = column[Timestamp]("ts")
 
-    def isDeleted = column[Timestamp]("isdeleted")
+    def lastActivity = column[Timestamp]("lastactivity")
 
-    def * = (id, name, ts, isDeleted) <> ((Project.apply _).tupled, Project.unapply)
+    def isDeleted = column[Option[Timestamp]]("isdeleted")
+
+    def * = (id, name, ts, lastActivity, isDeleted) <> ((Project.apply _).tupled, Project.unapply)
   }
 
   val projects = TableQuery[ProjectTable]

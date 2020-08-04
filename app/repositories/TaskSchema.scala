@@ -23,7 +23,7 @@ object TaskSchema extends JdbcProfile {
 
     def description = column[Option[String]]("description")
 
-    def isDeleted = column[Timestamp]("isdeleted")
+    def isDeleted = column[Option[Timestamp]]("isdeleted")
 
     def * = (id, project_id, ts, duration, volume, description, isDeleted) <> ((Task.apply _).tupled, Task.unapply)
   }

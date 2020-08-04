@@ -4,7 +4,7 @@ import java.sql.Timestamp
 
 import play.api.libs.json._
 
-case class Project(id: Int, name: String, ts: Timestamp, isDeleted: Timestamp)
+case class Project(id: Int, name: String, ts: Timestamp, lastActivity: Timestamp, isDeleted: Option[Timestamp])
 
 object Project {
   def timestampToString(t: Timestamp): String = t.toString
