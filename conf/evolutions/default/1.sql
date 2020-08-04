@@ -1,13 +1,13 @@
 -- !Ups
 
-CREATE TABLE Projects (
+CREATE TABLE IF NOT EXISTS projects (
     id SERIAL NOT NULL PRIMARY KEY,
     name varchar(255) NOT NULL UNIQUE,
     ts timestamp NOT NULL,
     isdeleted timestamp
 );
 
-CREATE TABLE Tasks (
+CREATE TABLE IF NOT EXISTS tasks (
     id SERIAL NOT NULL PRIMARY KEY,
     project_id INT NOT NULL,
     ts timestamp NOT NULL,
@@ -17,9 +17,10 @@ CREATE TABLE Tasks (
     isdeleted timestamp,
     CONSTRAINT fk_project
         FOREIGN KEY (project_id)
-            REFERENCES Projects(id)
+            REFERENCES projects(id)
 );
 
 -- !Downs
 
-DROP TABLE Projects;
+DROP TABLE tasks;
+DROP TABLE projects;

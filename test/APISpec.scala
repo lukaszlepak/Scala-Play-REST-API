@@ -4,8 +4,11 @@ import org.scalatestplus.play.PlaySpec
 import play.api.libs.json.Json
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
+import play.api.db.Databases
 
-class APISpec extends PlaySpec with GuiceOneAppPerSuite  {
+class APISpec extends PlaySpec with GuiceOneAppPerSuite {
+
+  private val database = Databases.inMemory()
 
   val projectsURL = "/v1/projects"
   def projectURL(name: String) = s"/v1/projects/$name"
