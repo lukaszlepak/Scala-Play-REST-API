@@ -9,7 +9,7 @@ import play.api.routing.sird._
 class Router @Inject()(projectController: ProjectController, taskController: TaskController) extends SimpleRouter {
 
   override def routes: Routes = {
-    case GET(p"/projects" ? q_*"id=${ int(ids) }" & q_?"beforets=$beforeTS" & q_?"afterts=$afterTS" & q_?"isDeleted=${ bool(isDeleted) }"
+    case GET(p"/projects" ? q_*"id=${ int(ids) }" & q_?"beforets=$beforeTS" & q_?"afterts=$afterTS" & q_?"is_deleted=${ bool(isDeleted) }"
       & q_?"page=${ int(page) }" & q_?"page_size=${ int(page_size) }"
       & q_?"sort_by=$sortBy" & q_?"order=$order") =>
       projectController.findProjectsWithTasks(ids, beforeTS, afterTS, isDeleted, page, page_size, sortBy, order)

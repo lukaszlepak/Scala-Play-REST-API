@@ -9,6 +9,7 @@ import slick.jdbc.JdbcProfile
 
 import scala.collection.immutable.SeqMap
 import scala.concurrent.{ExecutionContext, Future}
+import scala.util.Try
 
 class ProjectRepository @Inject() (protected val dbConfigProvider: DatabaseConfigProvider)(implicit ec: ExecutionContext) extends HasDatabaseConfigProvider[JdbcProfile] {
 
@@ -26,8 +27,8 @@ class ProjectRepository @Inject() (protected val dbConfigProvider: DatabaseConfi
       .filterOpt(beforeTS)(_.ts < _)
       .filterOpt(afterTS)(_.ts > _)
       .filterOpt(isDeleted) {
-        case (row, true) => row.isDeleted.isEmpty
-        case (row, false) => row.isDeleted.isDefined
+        case (row, true) => row.isDeleted.isDefined
+        case (row, false) => row.isDeleted.isEmpty
       }
 
     val sortedProjects = (sortBy, order) match {
@@ -51,32 +52,40 @@ class ProjectRepository @Inject() (protected val dbConfigProvider: DatabaseConfi
   }
 
   def findProjectWithTasks(id: Int): Future[Option[(Project, Seq[Option[Task]])]] = db.run {
-    leftJoinProjectsTasks.filter(_._1.id === id).result
-      .map { _.groupBy(_._1).map { case (k,v) => (k,v.map(_._2)) }.headOption }
+    leftJoinProjectsTasks.filter(_._1.id === id)
+      .take(1)
+      .result
+      .map {
+        _.groupBy(_._1)
+          .map {
+            case (k,v) => (k,v.map(_._2))
+          }.headOption
+      }
   }
 
-  def insertProject(name: String): Future[Int] = db.run {
-    projects.filter(_.name === name).result.headOption.flatMap {
-      case Some(_) => DBIO.successful(-1)
-      case None => projects += Project(0, name, new Timestamp(System.currentTimeMillis()),  new Timestamp(System.currentTimeMillis()), None)
-    }.transactionally
+  def insertProject(name: String): Future[Try[Int]] = db.run {
+    val ts = new Timestamp(System.currentTimeMillis())
+    (projects += Project(0, name, ts, ts, None))
+      .asTry
   }
 
-  def updateProject(id: Int, name: String): Future[Int] = db.run {
-    projects.filter(_.name === name).result.headOption.flatMap {
-      case Some(_) => DBIO.successful(-1)
-      case None => projects.filter(_.id === id).map(_.name).update(name)
-    }.transactionally
+  def updateProject(id: Int, name: String): Future[Try[Int]] = db.run {
+    projects
+      .filter(p => p.id === id &&p.isDeleted.isEmpty)
+      .map(_.name)
+      .update(name)
+      .asTry
   }
 
   def softDeleteProject(id: Int): Future[Int] = db.run {
-    {
-      val ts = new Timestamp(System.currentTimeMillis())
-      projects.filter(_.id === id).result.headOption.flatMap {
-        case Some(p) => tasks.filter(t => t.project_id === p.id).map(_.isDeleted).update(Some(ts)) andThen
-          projects.filter(_.id === id).map(_.isDeleted).update(Some(ts))
-        case None => DBIO.successful(0)
-      }
-    }.transactionally
+    val ts = new Timestamp(System.currentTimeMillis())
+    tasks
+      .filter(t => t.project_id === id && t.isDeleted.isEmpty)
+      .map(_.isDeleted)
+      .update(Some(ts)) andThen
+        projects
+          .filter(p => p.id === id && p.isDeleted.isEmpty)
+          .map(_.isDeleted)
+          .update(Some(ts))
   }
 }

@@ -3,38 +3,67 @@ package controllers
 import java.sql.Timestamp
 
 import javax.inject.Inject
+import jsonErrors.JSONError
 import play.api.libs.json.JsValue
 import play.api.mvc._
 import repositories.TaskRepository
 
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
+import scala.util.{Failure, Success, Try}
 
-class TaskController @Inject()(repository: TaskRepository, cc: ControllerComponents) extends AbstractController(cc) {
+class TaskController @Inject()(repository: TaskRepository, cc: ControllerComponents) extends AbstractController(cc) with JSONError {
 
-  def insertTask(): Action[JsValue] = Action.async(parse.json) { request: Request[JsValue] =>
-    val addedTask = repository.insertTask((request.body \ "project_id").as[Int], (request.body \ "duration").as[Long], Option((request.body \ "volume").as[Int]), Option((request.body \ "description").as[String]))
+  def insertTask(): Action[JsValue] = Action.async(parse.json) { implicit request: Request[JsValue] =>
 
-    addedTask.map {
-      case 0 => BadRequest("CANNOT ADD NEW TASK, LAST TASK IS NOT FINISHED YET")
-      case _ => Ok
+    val params = for {
+      project_id <- Try((request.body \ "project_id").as[Int])
+      duration <- Try((request.body \ "duration").as[Long])
+    } yield (project_id, duration)
+
+    params match {
+      case Success(value) => {
+        repository.insertTask(value._1, value._2, (request.body \ "volume").asOpt[Int], (request.body \ "description").asOpt[String])
+          .map {
+            case Success(res) => res match {
+              case 0 => NotFoundJson()
+              case _ => Ok
+            }
+            case Failure(e: IllegalArgumentException) => BadRequestJson(e.getMessage)
+          }
+      }
+      case Failure(e) => Future.successful(BadRequestJson(e.getMessage))
     }
   }
 
-  def updateTask(id: Int): Action[JsValue] = Action.async(parse.json) { request: Request[JsValue] =>
-    val updatedTask = repository.updateTask(id, (request.body \ "project_id").as[Int], Timestamp.valueOf((request.body \ "timestamp").as[String]), (request.body \ "duration").as[Long], Option((request.body \ "volume").as[Int]), Option((request.body \ "description").as[String]))
+  def updateTask(id: Int): Action[JsValue] = Action.async(parse.json) { implicit request: Request[JsValue] =>
 
-    updatedTask.map {
-      case -1 => NotFound("NOT FOUND")
-      case 0 => BadRequest("CANNOT UPDATE TASK, LAST TASK IS NOT FINISHED YET")
-      case _ => Ok
+    val params = for {
+      project_id <- Try((request.body \ "project_id").as[Int])
+      timeStamp <- Try(Timestamp.valueOf((request.body \ "timestamp").as[String]))
+      duration <- Try((request.body \ "duration").as[Long])
+    } yield (project_id, timeStamp, duration)
+
+    params match {
+      case Success(value) => {
+        repository.updateTask(id, value._1, value._2, value._3, (request.body \ "volume").asOpt[Int], (request.body \ "description").asOpt[String])
+          .map {
+            case Success(res) => res match {
+              case 0 => NotFoundJson()
+              case _ => Ok
+            }
+            case Failure(e: IllegalArgumentException) => BadRequestJson(e.getMessage)
+          }
+      }
+      case Failure(e) => Future.successful(BadRequestJson(e.getMessage))
     }
   }
 
-  def softDeleteTask(id: Int): Action[AnyContent] = Action.async {
+  def softDeleteTask(id: Int): Action[AnyContent] = Action.async { implicit request =>
     val deletedTask = repository.softDeleteTask(id)
 
     deletedTask.map {
-      case 0 => NotFound("NO RECORD WITH THAT NAME")
+      case 0 => NotFoundJson()
       case _ => Ok
     }
   }

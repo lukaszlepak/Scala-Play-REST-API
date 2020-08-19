@@ -50,11 +50,6 @@ class APISpec extends PlaySpec with GuiceOneAppPerSuite {
       status(response) mustBe OK
     }
 
-    "delete project" in {
-      val response = route(app, FakeRequest(DELETE, projectURL(1))).get
-      status(response) mustBe OK
-    }
-
     ///////////TASKS
 
     "add a task" in {
@@ -80,11 +75,17 @@ class APISpec extends PlaySpec with GuiceOneAppPerSuite {
       status(response) mustBe OK
     }
 
+    ///////// DELETION
+
     "delete task" in {
-      val response = route(app, FakeRequest(DELETE, taskURL(1))).get
+      val response = route(app, FakeRequest(DELETE, taskURL(2))).get
       status(response) mustBe OK
     }
 
+    "delete project" in {
+      val response = route(app, FakeRequest(DELETE, projectURL(1))).get
+      status(response) mustBe OK
+    }
   }
 
 }
