@@ -2,6 +2,7 @@ package controllers
 
 import java.sql.Timestamp
 
+import actions.AuthAction
 import javax.inject.Inject
 import jsonErrors.JSONError
 import play.api.libs.json.JsValue
@@ -12,9 +13,9 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.util.{Failure, Success, Try}
 
-class TaskController @Inject()(repository: TaskRepository, cc: ControllerComponents) extends AbstractController(cc) with JSONError {
+class TaskController @Inject()(authAction: AuthAction, repository: TaskRepository, cc: ControllerComponents) extends AbstractController(cc) with JSONError {
 
-  def insertTask(): Action[JsValue] = Action.async(parse.json) { implicit request: Request[JsValue] =>
+  def insertTask(): Action[JsValue] = authAction.async(parse.json) { implicit request: Request[JsValue] =>
 
     val params = for {
       project_id <- Try((request.body \ "project_id").as[Int])
@@ -36,7 +37,7 @@ class TaskController @Inject()(repository: TaskRepository, cc: ControllerCompone
     }
   }
 
-  def updateTask(id: Int): Action[JsValue] = Action.async(parse.json) { implicit request: Request[JsValue] =>
+  def updateTask(id: Int): Action[JsValue] = authAction.async(parse.json) { implicit request: Request[JsValue] =>
 
     val params = for {
       project_id <- Try((request.body \ "project_id").as[Int])
@@ -59,7 +60,7 @@ class TaskController @Inject()(repository: TaskRepository, cc: ControllerCompone
     }
   }
 
-  def softDeleteTask(id: Int): Action[AnyContent] = Action.async { implicit request =>
+  def softDeleteTask(id: Int): Action[AnyContent] = authAction.async { implicit request =>
     val deletedTask = repository.softDeleteTask(id)
 
     deletedTask.map {

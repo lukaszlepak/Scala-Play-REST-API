@@ -19,6 +19,10 @@ libraryDependencies ++= Seq(
   "com.typesafe.play" %% "play-slick-evolutions" % "5.0.0"
 )
 
+libraryDependencies ++= Seq(
+  "com.pauldijou" %% "jwt-play-json" % "4.2.0"
+)
+
 libraryDependencies += jdbc % "test"
 
 libraryDependencies ++= Seq( "org.scalatestplus.play" %% "scalatestplus-play" % "5.1.0" % "test" )

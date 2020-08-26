@@ -24,4 +24,8 @@ trait JSONError {
   def NotFoundJson(msg: String = "NOT FOUND")(implicit request: RequestHeader): Result = {
     StatusJson(404)(msg)
   }
+
+  def UnAuthorizedJson(msg: String = "NOT AUTHORIZED")(implicit request: RequestHeader): Result = {
+    StatusJson(401)(msg)
+  }
 }

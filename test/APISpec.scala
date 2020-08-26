@@ -5,6 +5,8 @@ import play.api.libs.json.Json
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 
+import com.typesafe.config.ConfigFactory
+
 class APISpec extends PlaySpec with GuiceOneAppPerSuite {
 
   val projectsURL = "/v1/projects"
@@ -12,6 +14,8 @@ class APISpec extends PlaySpec with GuiceOneAppPerSuite {
 
   val tasksURL = "/v1/tasks"
   def taskURL(id: Int) = s"/v1/tasks/$id"
+
+  val jwtToken = ConfigFactory.load().getString("jwt.generatedToken")
 
   "API" should {
 
@@ -25,18 +29,18 @@ class APISpec extends PlaySpec with GuiceOneAppPerSuite {
         "name" -> projectName
       )
 
-      val response = route(app, FakeRequest(POST, projectsURL).withBody(fakeJSON)).get
+      val response = route(app, FakeRequest(POST, projectsURL).withHeaders(AUTHORIZATION -> jwtToken).withBody(fakeJSON)).get
       status(response) mustBe OK
     }
 
     "show all projects" in {
-      val response = route(app, FakeRequest(GET, projectsURL)).get
+      val response = route(app, FakeRequest(GET, projectsURL).withHeaders(AUTHORIZATION -> jwtToken)).get
       status(response) mustBe OK
       contentAsString(response) must include (projectName)
     }
 
     "show added project" in {
-      val response = route(app, FakeRequest(GET, projectURL(1))).get
+      val response = route(app, FakeRequest(GET, projectURL(1)).withHeaders(AUTHORIZATION -> jwtToken)).get
       status(response) mustBe OK
       contentAsString(response) must include (projectName)
     }
@@ -46,7 +50,7 @@ class APISpec extends PlaySpec with GuiceOneAppPerSuite {
         "name" -> projectNewName
       )
 
-      val response = route(app, FakeRequest(PUT, projectURL(1)).withBody(fakeJSON)).get
+      val response = route(app, FakeRequest(PUT, projectURL(1)).withHeaders(AUTHORIZATION -> jwtToken).withBody(fakeJSON)).get
       status(response) mustBe OK
     }
 
@@ -59,7 +63,7 @@ class APISpec extends PlaySpec with GuiceOneAppPerSuite {
         "volume" -> 1,
         "description" -> "test"
       )
-      val response = route(app, FakeRequest(POST, tasksURL).withBody(fakeJSON)).get
+      val response = route(app, FakeRequest(POST, tasksURL).withHeaders(AUTHORIZATION -> jwtToken).withBody(fakeJSON)).get
       status(response) mustBe OK
     }
 
@@ -71,19 +75,19 @@ class APISpec extends PlaySpec with GuiceOneAppPerSuite {
         "volume" -> 2,
         "description" -> "test2"
       )
-      val response = route(app, FakeRequest(PUT, taskURL(1)).withBody(fakeJSON)).get
+      val response = route(app, FakeRequest(PUT, taskURL(1)).withHeaders(AUTHORIZATION -> jwtToken).withBody(fakeJSON)).get
       status(response) mustBe OK
     }
 
     ///////// DELETION
 
     "delete task" in {
-      val response = route(app, FakeRequest(DELETE, taskURL(2))).get
+      val response = route(app, FakeRequest(DELETE, taskURL(2)).withHeaders(AUTHORIZATION -> jwtToken)).get
       status(response) mustBe OK
     }
 
     "delete project" in {
-      val response = route(app, FakeRequest(DELETE, projectURL(1))).get
+      val response = route(app, FakeRequest(DELETE, projectURL(1)).withHeaders(AUTHORIZATION -> jwtToken)).get
       status(response) mustBe OK
     }
   }

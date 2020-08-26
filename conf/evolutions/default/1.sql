@@ -21,6 +21,13 @@ CREATE TABLE IF NOT EXISTS tasks (
             REFERENCES projects(id)
 );
 
+CREATE TABLE IF NOT EXISTS users (
+    uuid UUID NOT NULL PRIMARY KEY
+);
+
+INSERT INTO users VALUES ('74c8c172-e167-4754-9cbf-0d48aefd6167');
+INSERT INTO users VALUES ('536347fb-4c28-4aa0-a765-1a8b87eb1a86');
+
 -- !Downs
 
 DROP TABLE tasks;
