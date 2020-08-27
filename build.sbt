@@ -23,6 +23,9 @@ libraryDependencies ++= Seq(
   "com.pauldijou" %% "jwt-play-json" % "4.2.0"
 )
 
+javaOptions in Test += "-Dconfig.file=conf/testApplication.conf"
+fork in Test := true
+
 libraryDependencies += jdbc % "test"
 
 libraryDependencies ++= Seq( "org.scalatestplus.play" %% "scalatestplus-play" % "5.1.0" % "test" )
